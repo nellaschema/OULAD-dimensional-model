@@ -55,14 +55,44 @@ SELECT
 FROM IDENTIFIER(raw_namespace || '.vle') AS vle
 INNER JOIN IDENTIFIER(clean_namespace || '.courses_clean') AS course  -- only VLE sites for valid courses
   ON UPPER(TRIM(vle.code_module)) = course.code_module
-  AND UPPER(TRIM(vle.code_presentation)) = course.code_presentation
+  AND UPPER(TRIM(vle.code_presentation)) = course.code_presentation    
 WHERE vle.id_site IS NOT NULL
   AND vle.activity_type IS NOT NULL
   AND TRIM(vle.activity_type) <> ''
+  AND LOWER(TRIM(vle.activity_type)) IN (
+    'dataplus',
+    'dualpane',
+    'externalquiz',
+    'folder',
+    'forumng',
+    'glossary',
+    'homepage',
+    'htmlactivity',
+    'oucollaborate',
+    'oucontent',
+    'ouelluminate',
+    'ouwiki',
+    'page',
+    'questionnaire',
+    'quiz',
+    'repeatactivity',
+    'resource',
+    'sharedsubpage',
+    'subpage',
+    'url'
+  )
+  AND (
+    vle.week_from IS NULL
+    OR vle.week_from >= 0
+  )
+  AND (
+    vle.week_to IS NULL
+    OR vle.week_to >= 0
+  )
   AND (
     vle.week_from IS NULL
     OR vle.week_to IS NULL
-    OR vle.week_from <= vle.week_to              -- logical constraint: start week must precede or equal end week
+    OR vle.week_from <= vle.week_to   -- it validates the accepted OUL activity types, prevents negative week numbers, and retains the logical week order.
   );
 
 -- clean student information: enforce valid domain values and link to existing courses
