@@ -38,7 +38,8 @@ INNER JOIN IDENTIFIER(clean_namespace || '.courses_clean') AS course  -- inner j
 WHERE assessment.id_assessment IS NOT NULL
   AND assessment.assessment_type IN ('CMA', 'TMA', 'Exam')  -- only known assessment types
   AND assessment.weight BETWEEN 0 AND 100                   -- weight must be a valid percentage
-  AND (assessment.assessment_type = 'Exam' OR assessment.date IS NOT NULL);  -- exams may have null dates, others must not
+  AND (assessment.assessment_type = 'Exam' OR assessment.date IS NOT NULL)  -- exams may have null dates, others must not
+  AND (assessment.date IS NULL OR assessment.date >= 0); -- exams may have a NULL due-date offset, while existing assessment dates cannot be negative.
 
 -- clean VLE (Virtual Learning Environment) activities: normalize activity types and enforce logical week ranges
 CREATE OR REPLACE TABLE IDENTIFIER(clean_namespace || '.vle_clean')
