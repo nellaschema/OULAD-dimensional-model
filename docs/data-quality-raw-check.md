@@ -369,7 +369,6 @@ Based on the defined DQ criteria, the raw dataset meets the established raw-laye
 | Validity              | `sum_click`           | ≥ 0                  |
 | Validity              | VLE weeks             | ≥ 0                  |
 | Validity              | VLE activity type     | Defined OULAD domain |
-| Validity              | `date_submitted`      | ≤ 650                |
 | Referential Integrity | Table relationships   | 0 orphan records     |
 
 ---
