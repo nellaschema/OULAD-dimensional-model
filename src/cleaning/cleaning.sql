@@ -117,11 +117,21 @@ INNER JOIN IDENTIFIER(clean_namespace || '.courses_clean') AS course  -- only st
   ON UPPER(TRIM(student.code_module)) = course.code_module
   AND UPPER(TRIM(student.code_presentation)) = course.code_presentation
 WHERE student.id_student IS NOT NULL
-  AND student.gender IN ('F', 'M')                -- only recognized gender values
-  AND student.disability IN ('N', 'Y')            -- binary disability indicator
-  AND student.final_result IN ('Withdrawn', 'Fail', 'Pass', 'Distinction')  -- valid outcomes only
-  AND student.num_of_prev_attempts >= 0           -- cannot be negative
-  AND student.studied_credits > 0;                -- must have positive credit enrollment
+  AND student.gender IN ('F', 'M')
+  AND student.disability IN ('N', 'Y')
+  AND student.final_result IN (
+    'Withdrawn',
+    'Fail',
+    'Pass',
+    'Distinction'
+  )
+  AND TRIM(student.age_band) IN (
+    '0-35',
+    '35-55',
+    '55<='
+  )
+  AND student.num_of_prev_attempts >= 0
+  AND student.studied_credits > 0;               
 
 -- clean student registrations: ensure temporal consistency (registration before unregistration) and link to valid students
 CREATE OR REPLACE TABLE IDENTIFIER(clean_namespace || '.student_registration_clean')
