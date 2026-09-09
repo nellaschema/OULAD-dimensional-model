@@ -139,14 +139,7 @@ The following rules are applied:
 The following rules are applied:
 
 * Populated `score` values must be between 0 and 100.
-* `date_submitted` must not exceed the project-defined upper boundary of 650 days.
 * Negative `date_submitted` values are valid because OULAD uses relative dates.
-
-The upper boundary is implemented as:
-
-```sql
-date_submitted > 650
-```
 
 Negative values are not classified as invalid.
 
