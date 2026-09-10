@@ -21,6 +21,8 @@ CAST(sv.activity_date AS STRING)
 ds.student_key,
 
 dd.demographics_key,
+CURRENT_TIMESTAMP() AS mart_load_timestamp,
+CURRENT_DATE() AS mart_load_date,
 
 CAST(sv.activity_date AS STRING) AS activity_date_id,
 dc.course_key,
@@ -45,12 +47,12 @@ LEFT JOIN `ftw-week-07`.`03-mart`.dim_student AS ds
 ON sv.id_student = ds.id_student
 
 LEFT JOIN `ftw-week-07`.`03-mart`.dim_demographics AS dd
-ON si.gender = dd.gender
-AND si.region = dd.region
-AND si.highest_education = dd.highest_education
-AND si.imd_band = dd.imd_band
-AND si.age_band = dd.age_band
-AND si.disability = dd.disability
+ON COALESCE(si.gender, 'UNKNOWN') = dd.gender
+AND COALESCE(si.region, 'UNKNOWN') = dd.region
+AND COALESCE(si.highest_education, 'UNKNOWN') = dd.highest_education
+AND COALESCE(si.imd_band, 'UNKNOWN') = dd.imd_band
+AND COALESCE(si.age_band, 'UNKNOWN') = dd.age_band
+AND COALESCE(si.disability, 'UNKNOWN') = dd.disability
 
 LEFT JOIN `ftw-week-07`.`03-mart`.dim_course AS dc
 ON sv.code_module = dc.code_module
