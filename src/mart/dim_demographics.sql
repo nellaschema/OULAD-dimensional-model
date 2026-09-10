@@ -11,16 +11,18 @@ COALESCE(region, 'UNKNOWN'),
 COALESCE(highest_education, 'UNKNOWN'),
 COALESCE(imd_band, 'UNKNOWN'),
 COALESCE(age_band, 'UNKNOWN'),
-COALESCE(disability, 'UNKNOWN'),
-COALESCE(final_result, 'UNKNOWN')
+COALESCE(disability, 'UNKNOWN')
 ),
 256
 ) AS demographics_key,
-gender,
-region,
-highest_education,
-imd_band,
-age_band,
-disability,
-final_result
-FROM `ftw-week-07`.`02-clean`.student_info_clean;
+
+COALESCE(gender, 'UNKNOWN') AS gender,
+COALESCE(region, 'UNKNOWN') AS region,
+COALESCE(highest_education, 'UNKNOWN') AS highest_education,
+COALESCE(imd_band, 'UNKNOWN') AS imd_band,
+COALESCE(age_band, 'UNKNOWN') AS age_band,
+COALESCE(disability, 'UNKNOWN') AS disability,
+
+CURRENT_TIMESTAMP() AS mart_load_timestamp,
+CURRENT_DATE() AS mart_load_date
+FROM `ftw-week-07`.`02-clean`.student_info_clean
