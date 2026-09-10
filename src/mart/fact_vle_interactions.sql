@@ -20,19 +20,7 @@ CAST(sv.activity_date AS STRING)
 
 ds.student_key,
 
-SHA2(
-CONCAT_WS(
-'||',
-COALESCE(si.gender, 'UNKNOWN'),
-COALESCE(si.region, 'UNKNOWN'),
-COALESCE(si.highest_education, 'UNKNOWN'),
-COALESCE(si.imd_band, 'UNKNOWN'),
-COALESCE(si.age_band, 'UNKNOWN'),
-COALESCE(si.disability, 'UNKNOWN'),
-COALESCE(si.final_result, 'UNKNOWN')
-),
-256
-) AS demographics_key,
+dd.demographics_key,
 
 CAST(sv.activity_date AS STRING) AS activity_date_id,
 dc.course_key,
@@ -55,6 +43,14 @@ AND sv.code_presentation = si.code_presentation
 
 LEFT JOIN `ftw-week-07`.`03-mart`.dim_student AS ds
 ON sv.id_student = ds.id_student
+
+LEFT JOIN `ftw-week-07`.`03-mart`.dim_demographics AS dd
+ON si.gender = dd.gender
+AND si.region = dd.region
+AND si.highest_education = dd.highest_education
+AND si.imd_band = dd.imd_band
+AND si.age_band = dd.age_band
+AND si.disability = dd.disability
 
 LEFT JOIN `ftw-week-07`.`03-mart`.dim_course AS dc
 ON sv.code_module = dc.code_module
