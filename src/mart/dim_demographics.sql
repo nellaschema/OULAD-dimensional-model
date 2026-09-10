@@ -1,4 +1,5 @@
-CREATE OR REPLACE TABLE ftw-week-07.03-mart.dim_demographics
+%sql
+CREATE OR REPLACE TABLE `ftw-week-07`.`03-mart`.dim_demographics
 USING DELTA
 AS
 SELECT DISTINCT
@@ -22,4 +23,4 @@ imd_band,
 age_band,
 disability,
 final_result
-FROM ftw-week-07.02-clean.student_info_clean;
+FROM `ftw-week-07`.`02-clean`.student_info_clean;
