@@ -17,6 +17,8 @@ CAST(sa.id_assessment AS STRING)
 ds.student_key,
 
 dd.demographics_key,
+CURRENT_TIMESTAMP() AS mart_load_timestamp,
+CURRENT_DATE() AS mart_load_date,
 
 dc.course_key,
 dmp.module_presentation_key,
@@ -48,12 +50,12 @@ LEFT JOIN `ftw-week-07`.`03-mart`.dim_student AS ds
 ON sa.id_student = ds.id_student
 
 LEFT JOIN `ftw-week-07`.`03-mart`.dim_demographics AS dd
-ON si.gender = dd.gender
-AND si.region = dd.region
-AND si.highest_education = dd.highest_education
-AND si.imd_band = dd.imd_band
-AND si.age_band = dd.age_band
-AND si.disability = dd.disability
+ON COALESCE(si.gender, 'UNKNOWN') = dd.gender
+AND COALESCE(si.region, 'UNKNOWN') = dd.region
+AND COALESCE(si.highest_education, 'UNKNOWN') = dd.highest_education
+AND COALESCE(si.imd_band, 'UNKNOWN') = dd.imd_band
+AND COALESCE(si.age_band, 'UNKNOWN') = dd.age_band
+AND COALESCE(si.disability, 'UNKNOWN') = dd.disability
 
 LEFT JOIN `ftw-week-07`.`03-mart`.dim_course AS dc
 ON a.code_module = dc.code_module
