@@ -1,4 +1,5 @@
-CREATE OR REPLACE TABLE ftw-week-07.03-mart.fact_assessments
+%sql
+CREATE OR REPLACE TABLE `ftw-week-07`.`03-mart`.fact_assessments
 USING DELTA
 AS
 
@@ -45,22 +46,22 @@ CAST(a.weight AS DECIMAL(5,2)) AS assessment_weight,
 CAST(sa.is_banked AS BOOLEAN) AS is_banked,
 CAST(sa.score AS DECIMAL(5,2)) AS score
 
-FROM ftw-week-07.02-clean.student_assessment_clean AS sa
+FROM `ftw-week-07`.`02-clean`.student_assessment_clean AS sa
 
-INNER JOIN ftw-week-07.02-clean.assessments_clean AS a
+INNER JOIN `ftw-week-07`.`02-clean`.assessments_clean AS a
 ON sa.id_assessment = a.id_assessment
 
-INNER JOIN ftw-week-07.02-clean.student_info_clean AS si
+INNER JOIN `ftw-week-07`.`02-clean`.student_info_clean AS si
 ON sa.id_student = si.id_student
 AND a.code_module = si.code_module
 AND a.code_presentation = si.code_presentation
 
-LEFT JOIN ftw-week-07.03-mart.dim_student AS ds
+LEFT JOIN `ftw-week-07`.`03-mart`.dim_student AS ds
 ON sa.id_student = ds.id_student
 
-LEFT JOIN ftw-week-07.03-mart.dim_course AS dc
+LEFT JOIN `ftw-week-07`.`03-mart`.dim_course AS dc
 ON a.code_module = dc.code_module
 
-LEFT JOIN ftw-week-07.03-mart.dim_module_presentation AS dmp
+LEFT JOIN `ftw-week-07`.`03-mart`.dim_module_presentation AS dmp
 ON a.code_module = dmp.code_module
 AND a.code_presentation = dmp.code_presentation;
