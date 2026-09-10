@@ -8,8 +8,9 @@ SELECT
   highest_education,
   imd_band,
   age_band,
-  disability
+  disability,
+  final_result
 FROM (
-  SELECT DISTINCT gender, region, highest_education, imd_band, age_band, disability
+  SELECT DISTINCT gender, region, highest_education, imd_band, age_band, disability, final_result
   FROM `ftw-week-07`.`02-clean`.student_info_clean
 );
