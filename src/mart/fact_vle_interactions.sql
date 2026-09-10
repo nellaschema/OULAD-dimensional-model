@@ -1,4 +1,5 @@
-CREATE OR REPLACE TABLE ftw-week-07.03-mart.fact_vle_interactions
+%sql
+CREATE OR REPLACE TABLE `ftw-week-07`.`03-mart`.fact_vle_interactions
 USING DELTA
 AS
 
@@ -40,24 +41,24 @@ CAST(sv.id_site AS BIGINT) AS id_site,
 v.activity_type,
 CAST(sv.sum_click AS BIGINT) AS sum_click
 
-FROM ftw-week-07.02-clean.student_vle_clean AS sv
+FROM `ftw-week-07`.`02-clean`.student_vle_clean AS sv
 
-INNER JOIN ftw-week-07.02-clean.vle_clean AS v
+INNER JOIN `ftw-week-07`.`02-clean`.vle_clean AS v
 ON sv.id_site = v.id_site
 AND sv.code_module = v.code_module
 AND sv.code_presentation = v.code_presentation
 
-INNER JOIN ftw-week-07.02-clean.student_info_clean AS si
+INNER JOIN `ftw-week-07`.`02-clean`.student_info_clean AS si
 ON sv.id_student = si.id_student
 AND sv.code_module = si.code_module
 AND sv.code_presentation = si.code_presentation
 
-LEFT JOIN ftw-week-07.03-mart.dim_student AS ds
+LEFT JOIN `ftw-week-07`.`03-mart`.dim_student AS ds
 ON sv.id_student = ds.id_student
 
-LEFT JOIN ftw-week-07.03-mart.dim_course AS dc
+LEFT JOIN `ftw-week-07`.`03-mart`.dim_course AS dc
 ON sv.code_module = dc.code_module
 
-LEFT JOIN ftw-week-07.03-mart.dim_module_presentation AS dmp
+LEFT JOIN `ftw-week-07`.`03-mart`.dim_module_presentation AS dmp
 ON sv.code_module = dmp.code_module
 AND sv.code_presentation = dmp.code_presentation;
