@@ -1,37 +1,66 @@
-CREATE OR REPLACE TABLE `ftw-week-07`.`03-mart`.fact_assessments
+CREATE OR REPLACE TABLE ftw-week-07.03-mart.fact_assessments
 USING DELTA
 AS
+
 SELECT
-  concat_ws('-', CAST(sa.id_student AS STRING), CAST(sa.id_assessment AS STRING)) AS assessment_submission_key,
-  ds.student_key,
-  dd.demographics_key,
-  dc.course_key,
-  dmp.module_presentation_key,
-  CAST(sa.date_submitted AS STRING) AS submission_date_key,
-  CAST(a.assessment_date AS STRING) AS due_date_key,
-  a.id_assessment,
-  a.assessment_type,
-  CAST(a.weight AS DECIMAL(5,1)) AS assessment_weight,
-  sa.is_banked,
-  sa.score
-FROM `ftw-week-07`.`02-clean`.student_assessment_clean sa
-JOIN `ftw-week-07`.`02-clean`.assessments_clean a
-  ON sa.id_assessment = a.id_assessment
-JOIN `ftw-week-07`.`02-clean`.student_info_clean si
-  ON sa.id_student = si.id_student
- AND a.code_module = si.code_module
- AND a.code_presentation = si.code_presentation
-LEFT JOIN `ftw-week-07`.`03-mart`.dim_student ds
-  ON sa.id_student = ds.id_student
-LEFT JOIN `ftw-week-07`.`03-mart`.dim_demographics dd
-  ON si.gender = dd.gender
- AND si.region = dd.region
- AND si.highest_education = dd.highest_education
- AND si.imd_band = dd.imd_band
- AND si.age_band = dd.age_band
- AND si.disability = dd.disability
-LEFT JOIN `ftw-week-07`.`03-mart`.dim_course dc
-  ON a.code_module = dc.code_module
-LEFT JOIN `ftw-week-07`.`03-mart`.dim_module_presentation dmp
-  ON a.code_module = dmp.code_module
- AND a.code_presentation = dmp.code_presentation;
+-- Grain: one row per student assessment submission
+SHA2(
+CONCAT_WS(
+'||',
+CAST(sa.id_student AS STRING),
+CAST(sa.id_assessment AS STRING)
+),
+256
+) AS assessment_submission_key,
+
+ds.student_key,
+
+SHA2(
+CONCAT_WS(
+'||',
+COALESCE(si.gender, 'UNKNOWN'),
+COALESCE(si.region, 'UNKNOWN'),
+COALESCE(si.highest_education, 'UNKNOWN'),
+COALESCE(si.imd_band, 'UNKNOWN'),
+COALESCE(si.age_band, 'UNKNOWN'),
+COALESCE(si.disability, 'UNKNOWN'),
+COALESCE(si.final_result, 'UNKNOWN')
+),
+256
+) AS demographics_key,
+
+dc.course_key,
+dmp.module_presentation_key,
+
+CAST(sa.date_submitted AS STRING) AS submission_date_key,
+
+CASE
+WHEN a.assessment_date IS NULL THEN NULL
+ELSE CAST(a.assessment_date AS STRING)
+END AS due_date_key,
+
+CAST(a.id_assessment AS BIGINT) AS id_assessment,
+a.assessment_type,
+CAST(a.weight AS DECIMAL(5,2)) AS assessment_weight,
+CAST(sa.is_banked AS BOOLEAN) AS is_banked,
+CAST(sa.score AS DECIMAL(5,2)) AS score
+
+FROM ftw-week-07.02-clean.student_assessment_clean AS sa
+
+INNER JOIN ftw-week-07.02-clean.assessments_clean AS a
+ON sa.id_assessment = a.id_assessment
+
+INNER JOIN ftw-week-07.02-clean.student_info_clean AS si
+ON sa.id_student = si.id_student
+AND a.code_module = si.code_module
+AND a.code_presentation = si.code_presentation
+
+LEFT JOIN ftw-week-07.03-mart.dim_student AS ds
+ON sa.id_student = ds.id_student
+
+LEFT JOIN ftw-week-07.03-mart.dim_course AS dc
+ON a.code_module = dc.code_module
+
+LEFT JOIN ftw-week-07.03-mart.dim_module_presentation AS dmp
+ON a.code_module = dmp.code_module
+AND a.code_presentation = dmp.code_presentation;
