@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS `ftw-week-07`.`01-raw`.student_assessment (
     id_assessment INT,  
     date_submitted INT,  
     is_banked TINYINT, -- indicates whether the assessment score was carried forward from a previous attempt (0 = no, 1 = yes)  
-    score FLOAT  
+    score DOUBLE  
 ) USING DELTA;  
   
 COPY INTO `ftw-week-07`.`01-raw`.student_assessment  
@@ -64,7 +64,7 @@ FROM (
         TRY_CAST(id_assessment AS INT) AS id_assessment,
         TRY_CAST(date_submitted AS INT) AS date_submitted,
         TRY_CAST(is_banked AS TINYINT) AS is_banked, -- indicates whether the assessment score was carried forward from a previous attempt (0 = no, 1 = yes)
-        TRY_CAST(score AS FLOAT) AS score
+        TRY_CAST(score AS DOUBLE) AS score
     FROM '/Volumes/ftw-week-07/00-source/cloudflare-r2/shared/week07/studentAssessment.csv'
 )
 FILEFORMAT = CSV  
