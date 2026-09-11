@@ -1,0 +1,140 @@
+version: 2
+
+models:
+  - name: dim_student
+    description: One row per anonymized student identity.
+    columns:
+      - name: student_key
+        data_tests: [not_null, unique]
+      - name: id_student
+        data_tests: [not_null, unique]
+
+  - name: dim_course
+    description: One row per unique OULAD module code.
+    columns:
+      - name: course_key
+        data_tests: [not_null, unique]
+      - name: code_module
+        data_tests: [not_null, unique]
+
+  - name: dim_module_presentation
+    description: One row per module offering; grain is code_module plus code_presentation.
+    columns:
+      - name: module_presentation_key
+        data_tests: [not_null, unique]
+      - name: course_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_course')
+                field: course_key
+      - name: code_presentation
+        data_tests: [not_null]
+
+  - name: dim_date
+    description: One row per relative day; OULAD provides offsets rather than calendar dates.
+    columns:
+      - name: date_key
+        data_tests: [not_null, unique]
+      - name: relative_day
+        data_tests: [not_null, unique]
+
+  - name: dim_demographics
+    description: One row per distinct demographic profile; enrollment outcomes live in Analytics student_cohort.
+    columns:
+      - name: demographics_key
+        data_tests: [not_null, unique]
+
+  - name: fact_assessments
+    description: Event fact with one row per student assessment submission.
+    columns:
+      - name: assessment_submission_key
+        data_tests: [not_null, unique]
+      - name: student_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_student')
+                field: student_key
+      - name: course_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_course')
+                field: course_key
+      - name: module_presentation_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_module_presentation')
+                field: module_presentation_key
+      - name: demographics_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_demographics')
+                field: demographics_key
+      - name: submission_date_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: due_date_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: assessment_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [CMA, TMA, Exam]
+
+  - name: fact_vle_interactions
+    description: Aggregated fact with one row per student, module presentation, VLE site, and relative day.
+    columns:
+      - name: vle_interaction_key
+        data_tests: [not_null, unique]
+      - name: student_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_student')
+                field: student_key
+      - name: course_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_course')
+                field: course_key
+      - name: module_presentation_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_module_presentation')
+                field: module_presentation_key
+      - name: demographics_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_demographics')
+                field: demographics_key
+      - name: activity_date_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key

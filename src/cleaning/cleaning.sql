@@ -1,4 +1,6 @@
 %sql
+-- ORIGINAL TEAM QUERY: retained for contribution history and comparison.
+-- The final assignment path runs src/02_silver/sql/04_silver_tables.sql.
 -- Purpose: Clean source rows, normalize domains, and retain only conformed relationships.
 -- Grain: One clean row at the original grain of each source entity or event.
 -- Explanation: Declare variables needed from the setup notebook.

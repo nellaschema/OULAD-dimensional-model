@@ -1,3 +1,4 @@
+-- ORIGINAL TEAM QUERY: retained for contribution history; dbt model is models/mart/dim_date.sql.
 CREATE OR REPLACE TABLE `ftw-week-07`.`03-mart`.dim_date
 USING DELTA
 AS

@@ -1,4 +1,7 @@
 -- Supporting Table: Student Cohort
+-- ORIGINAL TEAM QUERY: retained for contribution history and not run by the final path.
+-- The final cohort model is src/04_analytics/sql/09_learner_outcomes.sql so
+-- enrollment outcomes do not become a third core Gold fact.
 -- Grain: One row per student enrollment per module presentation
 -- Purpose: Track enrollment outcomes (supporting table in mart layer)
 

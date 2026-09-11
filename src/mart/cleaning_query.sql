@@ -1,3 +1,5 @@
+-- ORIGINAL TEAM QUERY: retained as supplemental ad hoc checks.
+-- The authoritative dbt tests are in models/mart/schema.yml and tests/dbt/.
 -- 1. Duplicate assessment business keys
 SELECT
     student_key,

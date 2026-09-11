@@ -1,0 +1,19 @@
+version: 2
+
+sources:
+  - name: oulad_clean
+    description: Validated Silver tables produced in the Databricks clean schema.
+    database: ftw-week-07
+    schema: 02-clean
+    quoting:
+      database: true
+      schema: true
+      identifier: false
+    tables:
+      - name: courses_clean
+      - name: assessments_clean
+      - name: vle_clean
+      - name: student_info_clean
+      - name: student_registration_clean
+      - name: student_assessment_clean
+      - name: student_vle_clean

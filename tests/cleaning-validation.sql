@@ -1,4 +1,6 @@
 %sql
+-- ORIGINAL TEAM QUERY: retained for contribution history and supplemental validation.
+-- The final gated Silver suite is tests/05_validate_silver.sql.
 -- Purpose: Persist clean-layer DQ results and stop on broken keys or relationships.
 -- Grain: One row per data quality check and pipeline run.
 -- Explanation: Declare session-scoped variables to parameterize schema names and run metadata.

@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1080" viewBox="0 0 1600 1080">
+  <defs>
+    <style>
+      .bg { fill: #f7f9fc; }
+      .title { font: 700 30px Arial, sans-serif; fill: #19324d; }
+      .subtitle { font: 16px Arial, sans-serif; fill: #52677d; }
+      .box { stroke-width: 2.5; rx: 12; }
+      .dim { fill: #eaf3ff; stroke: #3979c9; }
+      .fact { fill: #fff1df; stroke: #e37a21; }
+      .support { fill: #f5eaff; stroke: #8848c7; stroke-dasharray: 10 7; }
+      .head { font: 700 19px Arial, sans-serif; fill: #18324b; }
+      .grain { font: italic 13px Arial, sans-serif; fill: #566b80; }
+      .field { font: 14px Arial, sans-serif; fill: #27394a; }
+      .key { font: 700 14px Arial, sans-serif; fill: #1f5fa8; }
+      .outcome { font: 700 14px Arial, sans-serif; fill: #7637a8; }
+      .line { fill: none; stroke: #7892ad; stroke-width: 2.2; }
+      .analytics-line { fill: none; stroke: #8848c7; stroke-width: 2.2; stroke-dasharray: 8 6; }
+      .divider { stroke: #bdd0e4; stroke-width: 1; }
+      .note { font: 700 14px Arial, sans-serif; fill: #7637a8; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#8848c7"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1600" height="1080"/>
+  <text class="title" x="800" y="46" text-anchor="middle">OULAD GOLD MODEL — 5 DIMENSIONS + 2 FACTS</text>
+  <text class="subtitle" x="800" y="74" text-anchor="middle">Enrollment outcome remains at its true student + module + presentation grain in Analytics</text>
+
+  <!-- relationships behind tables -->
+  <path class="line" d="M700 218 V270 H575 V315"/>
+  <path class="line" d="M740 218 V250 H1000 V315"/>
+  <path class="line" d="M365 400 H465"/>
+  <path class="line" d="M365 440 H830"/>
+  <path class="line" d="M1260 400 H1160"/>
+  <path class="line" d="M1260 440 H795"/>
+  <path class="line" d="M415 760 H520 V650"/>
+  <path class="line" d="M415 790 H875 V650"/>
+  <path class="line" d="M1185 760 H1100 V650"/>
+  <path class="line" d="M1185 790 H755 V650"/>
+
+  <!-- dim student -->
+  <rect class="box dim" x="570" y="105" width="360" height="115"/>
+  <text class="head" x="750" y="135" text-anchor="middle">dim_student</text>
+  <line class="divider" x1="570" y1="148" x2="930" y2="148"/>
+  <text class="key" x="590" y="173">PK student_key</text>
+  <text class="field" x="590" y="198">id_student</text>
+  <text class="grain" x="910" y="198" text-anchor="end">one student</text>
+
+  <!-- dim module presentation -->
+  <rect class="box dim" x="35" y="315" width="330" height="220"/>
+  <text class="head" x="200" y="345" text-anchor="middle">dim_module_presentation</text>
+  <line class="divider" x1="35" y1="358" x2="365" y2="358"/>
+  <text class="key" x="55" y="385">PK module_presentation_key</text>
+  <text class="field" x="55" y="412">course_key</text>
+  <text class="field" x="55" y="439">code_module</text>
+  <text class="field" x="55" y="466">code_presentation</text>
+  <text class="field" x="55" y="493">module_presentation_length</text>
+  <text class="grain" x="345" y="520" text-anchor="end">one module presentation</text>
+
+  <!-- fact assessments -->
+  <rect class="box fact" x="465" y="315" width="330" height="335"/>
+  <text class="head" x="630" y="345" text-anchor="middle">fact_assessments</text>
+  <line class="divider" x1="465" y1="358" x2="795" y2="358"/>
+  <text class="key" x="485" y="385">PK assessment_submission_key</text>
+  <text class="field" x="485" y="412">FK student_key</text>
+  <text class="field" x="485" y="439">FK demographics_key</text>
+  <text class="field" x="485" y="466">FK course_key</text>
+  <text class="field" x="485" y="493">FK module_presentation_key</text>
+  <text class="field" x="485" y="520">FK submission_date_key</text>
+  <text class="field" x="485" y="547">FK due_date_key</text>
+  <text class="field" x="485" y="574">id_assessment · assessment_type</text>
+  <text class="field" x="485" y="601">assessment_weight · is_banked · score</text>
+  <text class="grain" x="775" y="632" text-anchor="end">one student assessment submission</text>
+
+  <!-- fact VLE -->
+  <rect class="box fact" x="830" y="315" width="330" height="335"/>
+  <text class="head" x="995" y="345" text-anchor="middle">fact_vle_interactions</text>
+  <line class="divider" x1="830" y1="358" x2="1160" y2="358"/>
+  <text class="key" x="850" y="385">PK vle_interaction_key</text>
+  <text class="field" x="850" y="412">FK student_key</text>
+  <text class="field" x="850" y="439">FK demographics_key</text>
+  <text class="field" x="850" y="466">FK activity_date_id</text>
+  <text class="field" x="850" y="493">FK course_key</text>
+  <text class="field" x="850" y="520">FK module_presentation_key</text>
+  <text class="field" x="850" y="547">id_site · activity_type</text>
+  <text class="field" x="850" y="574">sum_click</text>
+  <text class="grain" x="1140" y="615" text-anchor="end">student + presentation + site + day</text>
+
+  <!-- demographics -->
+  <rect class="box dim" x="1260" y="315" width="305" height="260"/>
+  <text class="head" x="1412" y="345" text-anchor="middle">dim_demographics</text>
+  <line class="divider" x1="1260" y1="358" x2="1565" y2="358"/>
+  <text class="key" x="1280" y="385">PK demographics_key</text>
+  <text class="field" x="1280" y="412">gender</text>
+  <text class="field" x="1280" y="439">region</text>
+  <text class="field" x="1280" y="466">highest_education</text>
+  <text class="field" x="1280" y="493">imd_band</text>
+  <text class="field" x="1280" y="520">age_band</text>
+  <text class="field" x="1280" y="547">disability</text>
+  <text class="grain" x="1545" y="565" text-anchor="end">one demographic profile</text>
+
+  <!-- course -->
+  <rect class="box dim" x="155" y="705" width="310" height="130"/>
+  <text class="head" x="310" y="735" text-anchor="middle">dim_course</text>
+  <line class="divider" x1="155" y1="748" x2="465" y2="748"/>
+  <text class="key" x="175" y="775">PK course_key</text>
+  <text class="field" x="175" y="802">code_module</text>
+  <text class="grain" x="445" y="820" text-anchor="end">one module</text>
+
+  <!-- date -->
+  <rect class="box dim" x="1135" y="705" width="310" height="155"/>
+  <text class="head" x="1290" y="735" text-anchor="middle">dim_date</text>
+  <line class="divider" x1="1135" y1="748" x2="1445" y2="748"/>
+  <text class="key" x="1155" y="775">PK date_key</text>
+  <text class="field" x="1155" y="802">relative_day · relative_week</text>
+  <text class="field" x="1155" y="829">course_phase</text>
+  <text class="grain" x="1425" y="847" text-anchor="end">one relative day</text>
+
+  <!-- supporting analytics enrollment model -->
+  <path class="analytics-line" marker-end="url(#arrow)" d="M800 650 V900"/>
+  <rect class="box support" x="405" y="900" width="790" height="145"/>
+  <text class="head" x="800" y="930" text-anchor="middle">student_cohort — supporting Analytics model</text>
+  <line class="divider" x1="405" y1="943" x2="1195" y2="943"/>
+  <text class="key" x="430" y="971">PK student_cohort_key</text>
+  <text class="field" x="430" y="999">student_key · course_key · module_presentation_key · demographics_key</text>
+  <text class="outcome" x="930" y="971">final_result · is_withdrawn</text>
+  <text class="field" x="930" y="999">registration dates · credits · previous attempts</text>
+  <text class="grain" x="1170" y="1028" text-anchor="end">one student enrollment per module presentation — not a third Gold fact</text>
+
+  <text class="note" x="800" y="1068" text-anchor="middle">Gold core stays at 5 dimensions + 2 facts; enrollment outcomes remain in Analytics.</text>
+</svg>

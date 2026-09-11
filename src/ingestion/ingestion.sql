@@ -1,3 +1,5 @@
+-- ORIGINAL TEAM QUERY: retained for contribution history and comparison.
+-- The final assignment path runs src/01_bronze/sql/02_bronze_sources.sql.
 -- Ingest assessments 
 CREATE TABLE IF NOT EXISTS `ftw-week-07`.`01-raw`.assessments ( 
     code_module STRING, 

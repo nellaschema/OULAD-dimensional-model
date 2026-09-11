@@ -1,4 +1,5 @@
 %sql
+-- ORIGINAL TEAM QUERY: retained for contribution history; dbt model is models/mart/fact_vle_interactions.sql.
 CREATE OR REPLACE TABLE `ftw-week-07`.`03-mart`.fact_vle_interactions
 USING DELTA
 AS
