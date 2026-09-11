@@ -3,19 +3,48 @@
 -- Purpose: Load the seven OULAD CSV files into typed, source-aligned Delta tables.
 -- Grain: The original grain of each source file.
 
--- Explanation: source_path is declared by src/00_setup/01_setup.sql. Keeping its
--- value here lets the team override the configured Volume path in Setup without
--- this ingestion step silently resetting it.
-DECLARE OR REPLACE VARIABLE raw_namespace STRING DEFAULT '`ftw-week-07`.`01-raw`';
+-- source_path is declared in src/00_setup/01_setup.sql. Keeping that variable
+-- lets the team change the Unity Catalog Volume location once in Setup without
+-- silently resetting it in this ingestion step.
+DECLARE OR REPLACE VARIABLE raw_namespace STRING
+  DEFAULT '`ftw-week-07`.`01-raw`';
 
--- Explanation: READ_FILES options for robust CSV parsing:
--- - format => 'csv': Parse as CSV format
--- - header => true: First row contains column names
--- - quote => '"': Fields wrapped in double quotes when they contain special chars
--- - escape => '"': Double-quote to escape quotes within fields (standard CSV)
--- - mode => 'PERMISSIVE': Continue on malformed rows, store bad data in _rescued_data
--- - rescuedDataColumn: Column name for rescued malformed data
--- - schema: Explicit schema ensures correct type inference
+-- Shared READ_FILES choices used below:
+-- header => true: the first CSV row contains column names.
+-- explicit schema: prevents unstable type inference.
+-- PERMISSIVE + _rescued_data: retains malformed source values for DQ checks.
+-- TRIM and TRY_CAST: standardize values without aborting the entire load.
+-- BIGINT is used for identifiers and DECIMAL for weights/scores so later facts
+-- do not lose identifier range or decimal precision.
+
+-- date is the number of days relative to the module-presentation start; the final column is named assessment_date to make that role explicit in Silver. weight is the decimal percentage contribution to the course total.
+CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.assessments')
+USING DELTA
+AS
+SELECT
+  TRIM(code_module) AS code_module,
+  TRIM(code_presentation) AS code_presentation,
+  TRY_CAST(id_assessment AS BIGINT) AS id_assessment,
+  TRIM(assessment_type) AS assessment_type,
+  TRY_CAST(NULLIF(NULLIF(TRIM(date), ''), '?') AS INT) AS assessment_date,
+  TRY_CAST(weight AS DECIMAL(7, 3)) AS weight,
+  _rescued_data,
+  _metadata.file_path AS source_file,
+  CURRENT_TIMESTAMP() AS ingested_at
+FROM READ_FILES(
+  source_path || '/assessments.csv',
+  format => 'csv',
+  header => true,
+  quote => '"',
+  escape => '"',
+  mode => 'PERMISSIVE',
+  rescuedDataColumn => '_rescued_data',
+  -- Spark CSV schemas are positional, so this matches the source header order.
+  schema => 'code_module STRING, code_presentation STRING, id_assessment BIGINT, assessment_type STRING, date STRING, weight DECIMAL(7, 3)'
+);
+
+
+-- Ingest courses
 CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.courses')
 USING DELTA
 AS
@@ -37,55 +66,34 @@ FROM READ_FILES(
   schema => 'code_module STRING, code_presentation STRING, module_presentation_length INT'
 );
 
-CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.assessments')
+-- Ingest student_assessment
+-- is_banked shows whether a score was carried forward from a previous attempt:
+-- 0 = no and 1 = yes. Missing source scores use "?" and remain null; they are
+-- monitored by the DQ suite rather than imputed.
+CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.student_assessment')
 USING DELTA
 AS
 SELECT
   TRY_CAST(id_assessment AS BIGINT) AS id_assessment,
-  TRIM(code_module) AS code_module,
-  TRIM(code_presentation) AS code_presentation,
-  TRIM(assessment_type) AS assessment_type,
-  TRY_CAST(NULLIF(NULLIF(TRIM(date), ''), '?') AS INT) AS assessment_date,
-  TRY_CAST(weight AS DECIMAL(7, 3)) AS weight,
+  TRY_CAST(id_student AS BIGINT) AS id_student,
+  TRY_CAST(NULLIF(NULLIF(TRIM(date_submitted), ''), '?') AS INT) AS date_submitted,
+  TRY_CAST(is_banked AS INT) AS is_banked,
+  TRY_CAST(NULLIF(NULLIF(TRIM(score), ''), '?') AS DECIMAL(7, 3)) AS score,
   _rescued_data,
   _metadata.file_path AS source_file,
   CURRENT_TIMESTAMP() AS ingested_at
 FROM READ_FILES(
-  source_path || '/assessments.csv',
+  source_path || '/studentAssessment.csv',
   format => 'csv',
   header => true,
   quote => '"',
   escape => '"',
   mode => 'PERMISSIVE',
   rescuedDataColumn => '_rescued_data',
-  -- CSV schemas are positional in Spark, so this order must match the file header.
-  schema => 'code_module STRING, code_presentation STRING, id_assessment BIGINT, assessment_type STRING, date STRING, weight DECIMAL(7, 3)'
+  schema => 'id_assessment BIGINT, id_student BIGINT, date_submitted STRING, is_banked INT, score STRING'
 );
 
-CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.vle')
-USING DELTA
-AS
-SELECT
-  TRY_CAST(id_site AS BIGINT) AS id_site,
-  TRIM(code_module) AS code_module,
-  TRIM(code_presentation) AS code_presentation,
-  TRIM(activity_type) AS activity_type,
-  TRY_CAST(NULLIF(NULLIF(TRIM(week_from), ''), '?') AS INT) AS week_from,
-  TRY_CAST(NULLIF(NULLIF(TRIM(week_to), ''), '?') AS INT) AS week_to,
-  _rescued_data,
-  _metadata.file_path AS source_file,
-  CURRENT_TIMESTAMP() AS ingested_at
-FROM READ_FILES(
-  source_path || '/vle.csv',
-  format => 'csv',
-  header => true,
-  quote => '"',
-  escape => '"',
-  mode => 'PERMISSIVE',
-  rescuedDataColumn => '_rescued_data',
-  schema => 'id_site BIGINT, code_module STRING, code_presentation STRING, activity_type STRING, week_from STRING, week_to STRING'
-);
-
+-- Ingest student_info
 CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.student_info')
 USING DELTA
 AS
@@ -116,6 +124,8 @@ FROM READ_FILES(
   schema => 'code_module STRING, code_presentation STRING, id_student BIGINT, gender STRING, region STRING, highest_education STRING, imd_band STRING, age_band STRING, num_of_prev_attempts INT, studied_credits INT, disability STRING, final_result STRING'
 );
 
+-- Ingest student_registration
+-- date_registration and date_unregistration are relative-day offsets. 
 CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.student_registration')
 USING DELTA
 AS
@@ -123,8 +133,10 @@ SELECT
   TRIM(code_module) AS code_module,
   TRIM(code_presentation) AS code_presentation,
   TRY_CAST(id_student AS BIGINT) AS id_student,
-  TRY_CAST(NULLIF(NULLIF(TRIM(date_registration), ''), '?') AS INT) AS date_registration,
-  TRY_CAST(NULLIF(NULLIF(TRIM(date_unregistration), ''), '?') AS INT) AS date_unregistration,
+  TRY_CAST(NULLIF(NULLIF(TRIM(date_registration), ''), '?') AS INT)
+    AS date_registration,
+  TRY_CAST(NULLIF(NULLIF(TRIM(date_unregistration), ''), '?') AS INT)
+    AS date_unregistration,
   _rescued_data,
   _metadata.file_path AS source_file,
   CURRENT_TIMESTAMP() AS ingested_at
@@ -139,29 +151,8 @@ FROM READ_FILES(
   schema => 'code_module STRING, code_presentation STRING, id_student BIGINT, date_registration STRING, date_unregistration STRING'
 );
 
-CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.student_assessment')
-USING DELTA
-AS
-SELECT
-  TRY_CAST(id_assessment AS BIGINT) AS id_assessment,
-  TRY_CAST(id_student AS BIGINT) AS id_student,
-  TRY_CAST(NULLIF(NULLIF(TRIM(date_submitted), ''), '?') AS INT) AS date_submitted,
-  TRY_CAST(is_banked AS INT) AS is_banked,
-  TRY_CAST(NULLIF(NULLIF(TRIM(score), ''), '?') AS DECIMAL(7, 3)) AS score,
-  _rescued_data,
-  _metadata.file_path AS source_file,
-  CURRENT_TIMESTAMP() AS ingested_at
-FROM READ_FILES(
-  source_path || '/studentAssessment.csv',
-  format => 'csv',
-  header => true,
-  quote => '"',
-  escape => '"',
-  mode => 'PERMISSIVE',
-  rescuedDataColumn => '_rescued_data',
-  schema => 'id_assessment BIGINT, id_student BIGINT, date_submitted STRING, is_banked INT, score STRING'
-);
-
+-- Ingest student_vle (original team section retained).
+-- date is the number of days relative to the module-presentation start; the final column is named activity_date. Silver later combines repeated rows at the student + presentation + VLE site + relative-day grain and sums clicks.
 CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.student_vle')
 USING DELTA
 AS
@@ -184,4 +175,30 @@ FROM READ_FILES(
   mode => 'PERMISSIVE',
   rescuedDataColumn => '_rescued_data',
   schema => 'code_module STRING, code_presentation STRING, id_student BIGINT, id_site BIGINT, date INT, sum_click BIGINT'
+);
+
+-- Ingest vle (original team section retained).
+-- week_from and week_to are optional activity-availability offsets; "?" is treated as a genuine missing value rather than a parsing failure.
+CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.vle')
+USING DELTA
+AS
+SELECT
+  TRY_CAST(id_site AS BIGINT) AS id_site,
+  TRIM(code_module) AS code_module,
+  TRIM(code_presentation) AS code_presentation,
+  TRIM(activity_type) AS activity_type,
+  TRY_CAST(NULLIF(NULLIF(TRIM(week_from), ''), '?') AS INT) AS week_from,
+  TRY_CAST(NULLIF(NULLIF(TRIM(week_to), ''), '?') AS INT) AS week_to,
+  _rescued_data,
+  _metadata.file_path AS source_file,
+  CURRENT_TIMESTAMP() AS ingested_at
+FROM READ_FILES(
+  source_path || '/vle.csv',
+  format => 'csv',
+  header => true,
+  quote => '"',
+  escape => '"',
+  mode => 'PERMISSIVE',
+  rescuedDataColumn => '_rescued_data',
+  schema => 'id_site BIGINT, code_module STRING, code_presentation STRING, activity_type STRING, week_from STRING, week_to STRING'
 );
