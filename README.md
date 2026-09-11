@@ -191,3 +191,32 @@ and `tests/README.md`.
 
 OULAD is published by OU Analyse and archived on Figshare under the CC BY 4.0
 license.
+
+## CI/CD implementation
+
+This project uses GitHub Actions to run basic quality checks automatically. The workflow helps us catch missing folders and files before changes are merged into the `main` branch.
+
+The workflow is located at `.github/workflows/ci.yml` and is named `OULAD CI Quality Gates`.
+
+It runs when changes are pushed to `main`, `feature/**`, or `ci/**`, when a pull request targets `main`, or when it is started manually.
+
+The current checks confirm that:
+
+- The required `src/`, `tests/`, `docs/`, and `dashboard/` directories exist.
+- SQL files are present under `src/` and are not empty.
+- Test files are present under `tests/`.
+- `README.md` exists and contains content.
+
+### CI/CD confirmation run
+
+A confirmation run was completed successfully on the current `main` branch:
+
+- Workflow: [OULAD CI Quality Gates](https://github.com/ftw-week-07/OULAD-dimensional-model/actions/runs/34578767757)
+- Job: `Validate OULAD project`
+- Result: `Success`
+
+All configured validation checks passed, confirming that the CI/CD quality gates are working properly for the current project version.
+
+The run also showed a Node.js 20 deprecation annotation related to `actions/checkout@v4`. This is a non-blocking note for future improvement only. It did not affect the successful result and does not require immediate action.
+
+Future improvements may include deeper SQL validation, and tests, and additional data-quality checks for each project layer.
