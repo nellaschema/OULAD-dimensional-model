@@ -1,0 +1,90 @@
+name: OULAD CI Quality Gates
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+      - "ci/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-project:
+    name: Validate OULAD project
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check required directories
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_dirs=(
+            "src"
+            "tests"
+            "docs"
+            "dashboard"
+          )
+
+          for directory in "${required_dirs[@]}"; do
+            if [[ ! -d "$directory" ]]; then
+              echo "ERROR: Missing required directory: $directory"
+              exit 1
+            fi
+            echo "PASS: Found $directory/"
+          done
+
+      - name: Check SQL files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sql_count=$(find src -type f -name "*.sql" | wc -l)
+
+          if [[ "$sql_count" -eq 0 ]]; then
+            echo "ERROR: No SQL files found under src/"
+            exit 1
+          fi
+
+          while IFS= read -r file; do
+            if [[ ! -s "$file" ]]; then
+              echo "ERROR: SQL file is empty: $file"
+              exit 1
+            fi
+            echo "PASS: $file"
+          done < <(find src -type f -name "*.sql" | sort)
+
+      - name: Check test files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test_count=$(find tests -type f | wc -l)
+
+          if [[ "$test_count" -eq 0 ]]; then
+            echo "ERROR: No test files found under tests/"
+            exit 1
+          fi
+
+          echo "PASS: Found $test_count test file(s)"
+
+      - name: Check documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! -s README.md ]]; then
+            echo "ERROR: README.md is missing or empty"
+            exit 1
+          fi
+
+          echo "PASS: README.md exists and is not empty"
