@@ -2,6 +2,14 @@
 -- Name: 10 - Student Engagement
 -- Purpose: Relate daily VLE engagement to each student's final performance outcome.
 -- Grain: One student and module presentation, including students with no VLE activity.
+-- Depends on: Gold fact_vle_interactions/dim_date and Analytics student_cohort.
+-- Produces: student_engagement in 04-analytics.
+-- Why: The table answers whether engagement relates to performance while using
+-- the full enrollment cohort instead of only students who generated VLE events.
+-- Rerun behavior: The output is fully replaced.
+-- Interpretation: Counts describe observed platform activity, not learning time
+-- or causation; dashboards should present the relationship as an association.
+-- Documentation: See src/README.md and dashboard/oulad-analytics-dashboard.md.
 
 DECLARE OR REPLACE VARIABLE analytics_namespace STRING DEFAULT '`ftw-week-07`.`04-analytics`';
 DECLARE OR REPLACE VARIABLE mart_namespace STRING DEFAULT '`ftw-week-07`.`03-mart`';
@@ -9,6 +17,9 @@ DECLARE OR REPLACE VARIABLE mart_namespace STRING DEFAULT '`ftw-week-07`.`03-mar
 CREATE OR REPLACE TABLE IDENTIFIER(analytics_namespace || '.student_engagement')
 USING DELTA
 AS
+-- First compress the daily fact to one engagement summary per student and
+-- presentation. Distinct relative days measure frequency; total clicks measure
+-- volume; first/last day describe the observed activity span.
 WITH engagement AS (
   SELECT
     interaction.module_presentation_key,
@@ -23,6 +34,9 @@ WITH engagement AS (
     ON interaction.activity_date_id = relative_date.date_key
   GROUP BY interaction.module_presentation_key, interaction.student_key
 )
+-- student_cohort is deliberately on the left. COALESCE converts missing event
+-- aggregates to zero while leaving first/last activity day null, which clearly
+-- distinguishes no activity from activity on relative day zero.
 SELECT
   cohort.student_cohort_key,
   cohort.module_presentation_key,

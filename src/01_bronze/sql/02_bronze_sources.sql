@@ -2,6 +2,14 @@
 -- Name: 02 - Bronze Sources
 -- Purpose: Load the seven OULAD CSV files into typed, source-aligned Delta tables.
 -- Grain: The original grain of each source file.
+-- Depends on: 00_setup/01_setup.sql and a passing seven-file source check.
+-- Produces: assessments, courses, student_assessment, student_info,
+-- student_registration, student_vle, and vle in 01-raw.
+-- Why: Bronze provides reproducible typed copies before relationship cleaning.
+-- Rerun behavior: CREATE OR REPLACE performs a deterministic full refresh; it
+-- does not append a second copy of the fixed homework snapshot.
+-- Boundary: No cross-table joins or event deduplication occur in this layer.
+-- Documentation: See src/README.md and tests/03_validate_bronze.sql.
 
 -- source_path is declared in src/00_setup/01_setup.sql. Keeping that variable
 -- lets the team change the Unity Catalog Volume location once in Setup without
@@ -17,7 +25,10 @@ DECLARE OR REPLACE VARIABLE raw_namespace STRING
 -- BIGINT is used for identifiers and DECIMAL for weights/scores so later facts
 -- do not lose identifier range or decimal precision.
 
--- date is the number of days relative to the module-presentation start; the final column is named assessment_date to make that role explicit in Silver. weight is the decimal percentage contribution to the course total.
+-- Assessments grain: one row per assessment definition.
+-- date is the number of days relative to the module-presentation start; the
+-- final column is named assessment_date to make that role explicit in Silver.
+-- weight is the decimal percentage contribution to the course total.
 CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.assessments')
 USING DELTA
 AS
@@ -44,7 +55,9 @@ FROM READ_FILES(
 );
 
 
--- Ingest courses
+-- Ingest courses.
+-- Courses grain: one row per module + presentation; it becomes the parent
+-- lookup used to conform course references in Silver.
 CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.courses')
 USING DELTA
 AS
@@ -66,7 +79,8 @@ FROM READ_FILES(
   schema => 'code_module STRING, code_presentation STRING, module_presentation_length INT'
 );
 
--- Ingest student_assessment
+-- Ingest student_assessment.
+-- Submission grain: one row per student + assessment combination.
 -- is_banked shows whether a score was carried forward from a previous attempt:
 -- 0 = no and 1 = yes. Missing source scores use "?" and remain null; they are
 -- monitored by the DQ suite rather than imputed.
@@ -93,7 +107,9 @@ FROM READ_FILES(
   schema => 'id_assessment BIGINT, id_student BIGINT, date_submitted STRING, is_banked INT, score STRING'
 );
 
--- Ingest student_info
+-- Ingest student_info.
+-- Enrollment grain: one student in one module presentation. This is wider than
+-- stable student identity because demographics and outcomes are enrollment-level.
 CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.student_info')
 USING DELTA
 AS
@@ -124,8 +140,10 @@ FROM READ_FILES(
   schema => 'code_module STRING, code_presentation STRING, id_student BIGINT, gender STRING, region STRING, highest_education STRING, imd_band STRING, age_band STRING, num_of_prev_attempts INT, studied_credits INT, disability STRING, final_result STRING'
 );
 
--- Ingest student_registration
--- date_registration and date_unregistration are relative-day offsets. 
+-- Ingest student_registration.
+-- Registration grain: one student in one module presentation.
+-- date_registration and date_unregistration are relative-day offsets; null
+-- unregistration normally means the student did not unregister.
 CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.student_registration')
 USING DELTA
 AS
@@ -152,7 +170,10 @@ FROM READ_FILES(
 );
 
 -- Ingest student_vle (original team section retained).
--- date is the number of days relative to the module-presentation start; the final column is named activity_date. Silver later combines repeated rows at the student + presentation + VLE site + relative-day grain and sums clicks.
+-- Source grain: one recorded student interaction row. Repeated rows at the same
+-- student + presentation + VLE site + relative day are expected here.
+-- date is the number of days relative to the presentation start; the final
+-- column is named activity_date. Silver combines repeated rows and sums clicks.
 CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.student_vle')
 USING DELTA
 AS
@@ -178,7 +199,9 @@ FROM READ_FILES(
 );
 
 -- Ingest vle (original team section retained).
--- week_from and week_to are optional activity-availability offsets; "?" is treated as a genuine missing value rather than a parsing failure.
+-- VLE grain: one site/resource inside one module presentation.
+-- week_from and week_to are optional activity-availability offsets; "?" is
+-- treated as a genuine missing value rather than a parsing failure.
 CREATE OR REPLACE TABLE IDENTIFIER(raw_namespace || '.vle')
 USING DELTA
 AS

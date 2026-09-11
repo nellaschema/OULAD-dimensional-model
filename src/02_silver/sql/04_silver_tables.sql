@@ -2,12 +2,23 @@
 -- Name: 04 - Silver Tables
 -- Purpose: Clean source rows, normalize domains, and retain only conformed relationships.
 -- Grain: One clean row at the original grain of each source entity or event.
+-- Depends on: All seven Bronze tables and a passing Bronze validation gate.
+-- Produces: Seven reusable *_clean Delta tables in 02-clean.
+-- Why: Centralizing rules here prevents every fact/dashboard from cleaning the
+-- same text and relationships differently.
+-- Rerun behavior: All outputs are full-refresh replacements.
+-- Important exception: student_vle_clean intentionally changes source grain by
+-- summing repeated records to one student + presentation + site + day row.
+-- Documentation: See src/README.md and tests/05_validate_silver.sql.
 
 -- Explanation: Declare variables needed from the setup notebook.
 -- These must be defined here if the setup notebook hasn't been run in this session.
 DECLARE OR REPLACE VARIABLE raw_namespace STRING DEFAULT '`ftw-week-07`.`01-raw`';
 DECLARE OR REPLACE VARIABLE clean_namespace STRING DEFAULT '`ftw-week-07`.`02-clean`';
 
+-- courses_clean is built first because course + presentation is the parent
+-- reference used to reject orphaned assessments, VLE resources, and enrollments.
+-- Uppercase normalization makes later joins deterministic.
 CREATE OR REPLACE TABLE IDENTIFIER(clean_namespace || '.courses_clean')
 USING DELTA
 AS
@@ -22,6 +33,9 @@ WHERE code_module IS NOT NULL
   AND TRIM(code_presentation) <> ''
   AND module_presentation_length > 0;
 
+-- assessments_clean keeps valid assessment definitions attached to an existing
+-- presentation. A null due offset is permitted only for Exam rows, matching the
+-- supplied OULAD source behavior.
 CREATE OR REPLACE TABLE IDENTIFIER(clean_namespace || '.assessments_clean')
 USING DELTA
 AS
@@ -41,6 +55,9 @@ WHERE assessment.id_assessment IS NOT NULL
   AND assessment.weight BETWEEN 0 AND 100
   AND (assessment.assessment_type = 'Exam' OR assessment.assessment_date IS NOT NULL);
 
+-- vle_clean standardizes activity labels and accepts partially unknown
+-- availability windows, but rejects a fully known window whose start is after
+-- its end.
 CREATE OR REPLACE TABLE IDENTIFIER(clean_namespace || '.vle_clean')
 USING DELTA
 AS
@@ -64,6 +81,9 @@ WHERE vle.id_site IS NOT NULL
     OR vle.week_from <= vle.week_to
   );
 
+-- student_info_clean is the authoritative enrollment set. It keeps missing IMD
+-- bands as null (unknown) instead of inventing a socioeconomic category, while
+-- enforcing required demographic domains and positive study load.
 CREATE OR REPLACE TABLE IDENTIFIER(clean_namespace || '.student_info_clean')
 USING DELTA
 AS
@@ -96,6 +116,10 @@ WHERE student.id_student IS NOT NULL
   AND student.num_of_prev_attempts >= 0
   AND student.studied_credits > 0;
 
+-- student_registration_clean uses an inner join to the enrollment set so a
+-- registration cannot survive without the same student + presentation context.
+-- Null dates are retained; when both exist, registration must not occur after
+-- unregistration.
 CREATE OR REPLACE TABLE IDENTIFIER(clean_namespace || '.student_registration_clean')
 USING DELTA
 AS
@@ -114,6 +138,9 @@ WHERE registration.date_registration IS NULL
   OR registration.date_unregistration IS NULL
   OR registration.date_registration <= registration.date_unregistration;
 
+-- student_assessment_clean must resolve through an assessment to the matching
+-- student enrollment. Missing scores remain null; valid observed scores stay in
+-- the 0-100 range. The 0/1 banked indicator becomes a Boolean.
 CREATE OR REPLACE TABLE IDENTIFIER(clean_namespace || '.student_assessment_clean')
 USING DELTA
 AS
@@ -135,6 +162,9 @@ WHERE submission.id_student IS NOT NULL
   AND submission.is_banked IN (0, 1)
   AND (submission.score IS NULL OR submission.score BETWEEN 0 AND 100);
 
+-- student_vle_clean resolves both the student enrollment and VLE resource, then
+-- consolidates repeated source events at the fact's declared daily grain.
+-- SUM(sum_click) preserves the additive click control total.
 CREATE OR REPLACE TABLE IDENTIFIER(clean_namespace || '.student_vle_clean')
 USING DELTA
 AS

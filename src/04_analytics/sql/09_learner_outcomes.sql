@@ -2,11 +2,20 @@
 -- Name: 09 - Learner Outcomes
 -- Purpose: Publish the supporting cohort model and outcome summary.
 -- Grain: student_cohort is one student per module presentation; learner_outcomes is one presentation.
+-- Depends on: Validated Silver student_info_clean and student_registration_clean.
+-- Produces: student_cohort and learner_outcomes in 04-analytics.
+-- Why: Starting from enrollments keeps students with no VLE or assessment rows
+-- in denominators for withdrawal, pass, and distinction rates.
+-- Modeling boundary: student_cohort supports analysis but is not a third Gold
+-- fact; final_result belongs to an enrollment, not to a demographic profile.
+-- Rerun behavior: Both Analytics tables are fully replaced.
+-- Documentation: See src/README.md and docs/data-model.md.
 
 DECLARE OR REPLACE VARIABLE analytics_namespace STRING DEFAULT '`ftw-week-07`.`04-analytics`';
 DECLARE OR REPLACE VARIABLE clean_namespace STRING DEFAULT '`ftw-week-07`.`02-clean`';
 
--- Supporting reporting model only. It is intentionally not a third core Gold fact.
+-- Supporting reporting model only. It is intentionally not a third core Gold
+-- fact. The left join retains an enrollment when registration dates are missing.
 CREATE OR REPLACE TABLE IDENTIFIER(analytics_namespace || '.student_cohort')
 USING DELTA
 AS
@@ -47,6 +56,9 @@ LEFT JOIN IDENTIFIER(clean_namespace || '.student_registration_clean') AS regist
   AND student.code_presentation = registration.code_presentation
   AND student.id_student = registration.id_student;
 
+-- Aggregate the complete cohort to one module presentation. The four 0/1
+-- outcome counters are additive and must sum to enrolled_students; validation
+-- proves that reconciliation before dashboards use the rates.
 CREATE OR REPLACE TABLE IDENTIFIER(analytics_namespace || '.learner_outcomes')
 USING DELTA
 AS

@@ -2,6 +2,14 @@
 -- Name: 05 - Silver Validation
 -- Purpose: Persist clean-layer DQ results and stop on broken keys or relationships.
 -- Grain: One row per data quality check and pipeline run.
+-- Depends on: All seven Silver *_clean tables.
+-- Produces: Append-only SILVER rows in dq_check_results plus a blocking gate.
+-- Why: Silver filters and joins source rows, so its declared grains and parent
+-- relationships must be proved before facts and dimensions are built.
+-- Rerun behavior: A new UUID records a new suite run; earlier results remain.
+-- Expected: Critical grain/reference checks pass. Missing assessment scores may
+-- produce a non-blocking warning while their rate remains at or below 1 percent.
+-- Documentation: See tests/README.md.
 
 -- Explanation: Declare variables needed from the setup notebook.
 DECLARE OR REPLACE VARIABLE clean_namespace STRING DEFAULT '`ftw-week-07`.`02-clean`';
@@ -9,6 +17,8 @@ DECLARE OR REPLACE VARIABLE dq_namespace STRING DEFAULT '`ftw-week-07`.`05-data-
 DECLARE OR REPLACE VARIABLE dq_run_id STRING DEFAULT UUID();
 DECLARE OR REPLACE VARIABLE dq_executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP();
 
+-- Keep checks in one compatible UNION ALL set so scores and status rules are
+-- calculated consistently across every Silver dataset.
 INSERT INTO IDENTIFIER(dq_namespace || '.dq_check_results')
 WITH checks AS (
   SELECT
@@ -100,6 +110,7 @@ WITH checks AS (
     CAST(1.0 AS DECIMAL(7, 3)), 'MEDIUM', 'analytics', COUNT(*), COUNT_IF(score IS NULL)
   FROM IDENTIFIER(clean_namespace || '.student_assessment_clean')
 ),
+-- Row-weighted score calculation shared by every check in this suite.
 scored AS (
   SELECT
     *,
@@ -109,6 +120,7 @@ scored AS (
       ELSE 100.0 * GREATEST(total_count - failed_count, 0) / total_count END AS DECIMAL(7, 3)) AS score_pct
   FROM checks
 ),
+-- Zero-row required outputs fail; tolerated nonzero defects become warnings.
 classified AS (
   SELECT
     *,
@@ -122,6 +134,7 @@ SELECT
   total_count, failed_count, GREATEST(total_count - failed_count, 0), score_pct, failure_pct, status
 FROM classified;
 
+-- Prevent Gold from running when a current Silver critical rule failed.
 SELECT
   dataset_name,
   check_name,

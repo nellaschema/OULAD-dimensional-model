@@ -1,3 +1,8 @@
+-- Purpose: Verify each fact's direct course key agrees with the course key on
+-- its referenced module-presentation dimension.
+-- Why: Both keys are intentionally stored on each fact for direct BI joins;
+-- ordinary relationship tests prove existence but not agreement between them.
+-- Pass condition: This query returns zero rows across both fact tables.
 select fact_key
 from (
   select

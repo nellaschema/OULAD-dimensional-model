@@ -2,7 +2,16 @@
 -- Name: 14 - Data Quality Dashboard Views
 -- Purpose: Publish one current cross-suite snapshot plus historical DQ datasets.
 -- Important: Each validation suite has its own run_id, so current state is selected per layer.
+-- Depends on: dq_check_results populated by Bronze, Silver, Gold, and Analytics tests.
+-- Produces: Governed views for overview cards, dimensions, datasets, problems,
+-- daily history, and source-volume history.
+-- Why: Dashboard SQL should consume one stable semantic layer rather than
+-- reimplementing latest-run logic and quality formulas in every card.
+-- Rerun behavior: Views are replaced; persisted DQ history is never deleted.
+-- Documentation: See tests/README.md and dashboard/oulad-data-quality-dashboard.md.
 
+-- Find the newest complete validation run independently for each layer. A
+-- single global run_id cannot be used because suites execute at different times.
 CREATE OR REPLACE VIEW `ftw-week-07`.`05-data-quality`.dq_latest_check_results AS
 WITH validation_runs AS (
   SELECT
@@ -30,6 +39,9 @@ INNER JOIN ranked_runs AS latest
   AND checks.run_id = latest.run_id
 WHERE latest.run_rank = 1;
 
+-- One-row executive snapshot. weighted_quality_score_pct weights rules by their
+-- evaluated row counts; check_pass_rate_pct weights every rule equally. Showing
+-- both avoids hiding either widespread row defects or many small failed rules.
 CREATE OR REPLACE VIEW `ftw-week-07`.`05-data-quality`.dq_dashboard_overview AS
 WITH latest_checks AS (
   SELECT
@@ -72,6 +84,8 @@ SELECT
 FROM latest_checks
 CROSS JOIN source_volume;
 
+-- Aggregate raw quality dimensions. Referential integrity is presented as
+-- Consistency so dashboard labels remain understandable to nontechnical users.
 CREATE OR REPLACE VIEW `ftw-week-07`.`05-data-quality`.dq_dashboard_dimension_scores AS
 WITH mapped AS (
   SELECT
@@ -101,6 +115,8 @@ SELECT
 FROM mapped
 GROUP BY quality_dimension;
 
+-- Left join scores to a six-dimension catalog so an unmeasured dimension appears
+-- as NOT_MEASURED instead of silently disappearing from the dashboard.
 CREATE OR REPLACE VIEW `ftw-week-07`.`05-data-quality`.dq_dashboard_canonical_dimensions AS
 WITH dimension_catalog AS (
   SELECT dimension_order, dimension_key, dimension_label
@@ -140,6 +156,7 @@ FROM dimension_catalog AS catalog
 LEFT JOIN `ftw-week-07`.`05-data-quality`.dq_dashboard_dimension_scores AS scores
   ON catalog.dimension_key = scores.quality_dimension;
 
+-- Dataset-level scores help owners locate which layer and table need attention.
 CREATE OR REPLACE VIEW `ftw-week-07`.`05-data-quality`.dq_dashboard_dataset_scores AS
 SELECT
   layer,
@@ -157,6 +174,7 @@ SELECT
 FROM `ftw-week-07`.`05-data-quality`.dq_latest_check_results
 GROUP BY layer, dataset_name;
 
+-- Keep only warnings and failures for the actionable-problem table.
 CREATE OR REPLACE VIEW `ftw-week-07`.`05-data-quality`.dq_dashboard_problem_areas AS
 SELECT
   executed_at,
@@ -178,6 +196,8 @@ SELECT
 FROM `ftw-week-07`.`05-data-quality`.dq_latest_check_results
 WHERE status IN ('WARNING', 'FAIL');
 
+-- Keep the latest run per layer per day. This prevents repeated reruns on the
+-- same day from being double counted in the quality trend.
 CREATE OR REPLACE VIEW `ftw-week-07`.`05-data-quality`.dq_dashboard_daily_history AS
 WITH validation_runs AS (
   SELECT
@@ -222,6 +242,8 @@ SELECT
 FROM daily_checks
 GROUP BY run_date;
 
+-- Volume history preserves the observed count and absolute difference from the
+-- approved baseline for every Bronze volume check.
 CREATE OR REPLACE VIEW `ftw-week-07`.`05-data-quality`.dq_dashboard_volume_history AS
 SELECT
   run_id,

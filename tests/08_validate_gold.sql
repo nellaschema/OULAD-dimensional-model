@@ -3,10 +3,20 @@
 -- Name: 08 - Gold Validation
 -- Purpose: Validate exactly five dimensions and two facts before registering relationships.
 -- Grain: One row per data-quality check and pipeline run.
+-- Depends on: The complete dbt mart or SQL compatibility Gold build.
+-- Produces: Append-only GOLD rows in dq_check_results plus a blocking gate.
+-- Why: Databricks PK/FK declarations are informational, so actual uniqueness,
+-- referential integrity, measure ranges, and control totals must be queried.
+-- Rerun behavior: A new UUID records each validation attempt.
+-- Expected: Five dimension checks, two fact checks, and reconciliation controls
+-- pass before 08_gold_relationships.sql registers catalog metadata.
+-- Documentation: See tests/README.md and docs/validation.md.
 
 DECLARE OR REPLACE VARIABLE dq_run_id STRING DEFAULT UUID();
 DECLARE OR REPLACE VARIABLE dq_executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP();
 
+-- Dimension branches test declared grains; fact branches test all direct
+-- dimension keys and measures. Final branches reconcile Gold with Silver.
 INSERT INTO `ftw-week-07`.`05-data-quality`.dq_check_results
 WITH checks AS (
   SELECT
@@ -154,6 +164,7 @@ WITH checks AS (
     FROM `ftw-week-07`.`03-mart`.fact_vle_interactions
   ) AS gold
 ),
+-- Calculate weighted failure and quality percentages from the common metrics.
 scored AS (
   SELECT
     *,
@@ -168,6 +179,7 @@ scored AS (
     ) AS score_pct
   FROM checks
 ),
+-- Gold uses zero tolerance for every critical key, relationship, and control.
 classified AS (
   SELECT
     *,
@@ -185,6 +197,8 @@ SELECT
   score_pct, failure_pct, status
 FROM classified;
 
+-- Capture the session UUID in a one-row CTE, then block relationship
+-- registration if any critical check from this exact run failed.
 WITH current_run AS (
   SELECT dq_run_id AS current_run_id
 )

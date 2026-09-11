@@ -2,6 +2,12 @@
 -- Name: 01 - Setup
 -- Purpose: Configure the run, create layer schemas, and verify the seven required OULAD files.
 -- Grain: One validation row for the configured source directory.
+-- Depends on: The seven approved CSV files in the configured Unity Catalog Volume.
+-- Produces: Five layer schemas, the persistent DQ results table, and a file check.
+-- Why: Failing here avoids spending compute on an incomplete or wrong snapshot.
+-- Rerun behavior: Schema/table creation is idempotent; existing DQ history is kept.
+-- Expected result: 7 actual files, 0 unexpected files, and 0 missing files.
+-- Documentation: See src/README.md for the complete build order and rationale.
 
 -- Explanation: Declare session variables to centralize configuration.
 -- OR REPLACE ensures the variable is updated if it already exists from a previous run.
@@ -28,6 +34,8 @@ CREATE SCHEMA IF NOT EXISTS IDENTIFIER(dq_namespace);
 
 -- Explanation: Create a centralized table to store all data quality check results.
 -- The || operator concatenates the namespace variable with the table name.
+-- Each later suite appends a new run rather than overwriting history; dashboard
+-- views select the latest run per layer while retaining older runs for trends.
 CREATE TABLE IF NOT EXISTS IDENTIFIER(dq_namespace || '.dq_check_results') (
   run_id STRING NOT NULL,
   executed_at TIMESTAMP NOT NULL,
@@ -52,6 +60,8 @@ USING DELTA;
 
 -- Explanation: CTE (Common Table Expression) to define the seven required OULAD files.
 -- EXPLODE() converts the array into individual rows, one per filename.
+-- Exact filenames are part of the source contract because similarly named or
+-- extra CSVs could otherwise be loaded accidentally.
 WITH expected_files AS (
   SELECT EXPLODE(
     ARRAY(

@@ -2,6 +2,15 @@
 -- Name: 13 - Analytics Validation
 -- Purpose: Validate reporting outputs and consolidate cross-layer Accuracy controls.
 -- Grain: One row per data-quality check and validation-suite run.
+-- Depends on: Valid Silver, Gold, and all four Analytics build files.
+-- Produces: Append-only ANALYTICS rows in dq_check_results plus a blocking gate.
+-- Why: A dashboard table can have valid columns yet still duplicate cohorts or
+-- lose measures. Cross-layer controls prove reporting transformations preserved
+-- the upstream population, outcomes, submissions, scores, and clicks.
+-- Accuracy scope: Reconciliation proves transformation accuracy, not agreement
+-- with an unavailable external real-world truth source.
+-- Rerun behavior: A new UUID records each suite run.
+-- Documentation: See tests/README.md and docs/validation.md.
 
 DECLARE OR REPLACE VARIABLE clean_namespace STRING DEFAULT '`ftw-week-07`.`02-clean`';
 DECLARE OR REPLACE VARIABLE mart_namespace STRING DEFAULT '`ftw-week-07`.`03-mart`';
@@ -10,6 +19,8 @@ DECLARE OR REPLACE VARIABLE dq_namespace STRING DEFAULT '`ftw-week-07`.`05-data-
 DECLARE OR REPLACE VARIABLE dq_run_id STRING DEFAULT UUID();
 DECLARE OR REPLACE VARIABLE dq_executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP();
 
+-- The following control CTEs reduce each layer to additive counts and sums. The
+-- checks later compare like-for-like metrics without joining row-level tables.
 INSERT INTO IDENTIFIER(dq_namespace || '.dq_check_results')
 WITH silver_cohort AS (
   SELECT
@@ -76,6 +87,8 @@ analytics_assessment AS (
     SUM(score_sum) AS score_sum
   FROM IDENTIFIER(analytics_namespace || '.assessment_performance')
 ),
+-- First validate each Analytics table's own grain and metric domains; then
+-- compare additive controls between Silver, Gold, and Analytics.
 checks AS (
   SELECT
     'student_cohort' AS dataset_name,
@@ -270,6 +283,7 @@ checks AS (
   FROM gold_assessment AS gold
   CROSS JOIN analytics_assessment AS analytics
 ),
+-- Convert issue/control counts to comparable percentages for the DQ dashboard.
 scored AS (
   SELECT
     *,
@@ -284,6 +298,7 @@ scored AS (
     ) AS score_pct
   FROM checks
 ),
+-- Analytics uses zero tolerance for critical grain and reconciliation defects.
 classified AS (
   SELECT
     *,
@@ -301,6 +316,7 @@ SELECT
   score_pct, failure_pct, status
 FROM classified;
 
+-- Stop downstream dashboard refresh when this run contains a critical failure.
 SELECT
   dataset_name,
   check_name,

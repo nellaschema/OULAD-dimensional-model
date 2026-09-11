@@ -2,6 +2,14 @@
 -- Name: 03 - Bronze Validation
 -- Purpose: Persist source-level DQ results and stop on critical ingestion failures.
 -- Grain: One row per data quality check and pipeline run.
+-- Depends on: Setup and all seven Bronze tables.
+-- Produces: Append-only BRONZE rows in dq_check_results plus a blocking gate.
+-- Why: Typed ingestion can succeed even when keys, domains, volumes, or rescued
+-- values are wrong; this suite proves the source contract before Silver begins.
+-- Rerun behavior: A new UUID records a new validation run; history is preserved.
+-- Expected: Critical checks pass for the supplied snapshot. Medium volume and
+-- rescued-data checks stay visible without blocking unless marked CRITICAL.
+-- Documentation: See tests/README.md for formulas and troubleshooting.
 
 -- Explanation: Declare variables needed from the setup notebook.
 DECLARE OR REPLACE VARIABLE raw_namespace STRING DEFAULT '`ftw-week-07`.`01-raw`';
@@ -9,6 +17,8 @@ DECLARE OR REPLACE VARIABLE dq_namespace STRING DEFAULT '`ftw-week-07`.`05-data-
 DECLARE OR REPLACE VARIABLE dq_run_id STRING DEFAULT UUID();
 DECLARE OR REPLACE VARIABLE dq_executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP();
 
+-- Each UNION ALL branch returns the same check metric shape. This makes adding
+-- a rule explicit and keeps every expectation visible in the persisted table.
 INSERT INTO IDENTIFIER(dq_namespace || '.dq_check_results')
 WITH checks AS (
   SELECT
@@ -162,6 +172,8 @@ WITH checks AS (
     FROM IDENTIFIER(raw_namespace || '.student_vle')
   ) AS observed
   INNER JOIN (
+    -- These are the approved counts for the attached OULAD homework snapshot.
+    -- Update them only when the group intentionally adopts a different snapshot.
     SELECT * FROM VALUES
       ('courses', 22),
       ('assessments', 206),
@@ -174,6 +186,8 @@ WITH checks AS (
   ) AS expected
     ON observed.dataset_name = expected.dataset_name
 ),
+-- Convert raw issue counts to row-weighted scores. GREATEST protects the stored
+-- passed count when overlapping predicates make failed_count exceed total_count.
 scored AS (
   SELECT
     *,
@@ -184,6 +198,8 @@ scored AS (
       AS score_pct
   FROM checks
 ),
+-- A zero-row required dataset fails. Otherwise the threshold determines FAIL;
+-- a nonzero count inside tolerance becomes WARNING rather than PASS.
 classified AS (
   SELECT
     *,
@@ -212,6 +228,8 @@ SELECT
   status
 FROM classified;
 
+-- Stop the pipeline only for current-run critical failures. Medium issues remain
+-- queryable in the dashboard and do not erase the detailed results above.
 SELECT
   dataset_name,
   check_name,

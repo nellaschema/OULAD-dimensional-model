@@ -2,10 +2,21 @@
 -- Name: 07 - Gold Facts
 -- Purpose: Build the two facts explicitly required by the OULAD assignment.
 -- Grain: One assessment submission, or one student-presentation-site-relative-day interaction.
+-- Depends on: Passing Silver tables and the five Gold dimensions.
+-- Produces: fact_assessments and fact_vle_interactions in 03-mart.
+-- Why: Assessment submissions are event facts; VLE interactions are additive
+-- daily facts after Silver aggregation. Keeping their grains explicit prevents
+-- double counting when dashboards join dimensions.
+-- Rerun behavior: Both facts are full-refresh replacements.
+-- Documentation: See src/README.md, docs/data-model.md, and tests/08_validate_gold.sql.
 
 DECLARE OR REPLACE VARIABLE clean_namespace STRING DEFAULT '`ftw-week-07`.`02-clean`';
 DECLARE OR REPLACE VARIABLE mart_namespace STRING DEFAULT '`ftw-week-07`.`03-mart`';
 
+-- fact_assessments: one student submission for one assessment. Joining through
+-- the assessment definition supplies course, presentation, type, due offset,
+-- and weight; joining the matching enrollment supplies the correct demographic
+-- profile for that presentation.
 CREATE OR REPLACE TABLE IDENTIFIER(mart_namespace || '.fact_assessments')
 USING DELTA
 AS
@@ -44,6 +55,9 @@ INNER JOIN IDENTIFIER(clean_namespace || '.student_info_clean') AS student
   AND assessment.code_presentation = student.code_presentation
   AND submission.id_student = student.id_student;
 
+-- fact_vle_interactions: one student + presentation + site + relative-day row.
+-- The daily aggregation already happened in Silver, so this build enriches the
+-- fact with conformed keys and activity type without aggregating again.
 CREATE OR REPLACE TABLE IDENTIFIER(mart_namespace || '.fact_vle_interactions')
 USING DELTA
 AS

@@ -2,6 +2,14 @@
 -- Name: 12 - At-Risk Students
 -- Purpose: Create a transparent screening table from the two validated core facts.
 -- Grain: One student in one module presentation.
+-- Depends on: Gold assessment/VLE facts, dim_date, and Analytics student_cohort.
+-- Produces: at_risk_students in 04-analytics.
+-- Why: The assignment asks for dropout-risk analysis; a documented rule score
+-- is interpretable and auditable without pretending to be a trained predictor.
+-- Rerun behavior: The output is fully replaced.
+-- Important: final_result is copied only for retrospective evaluation. It is
+-- not used in risk_score, avoiding direct target leakage.
+-- Documentation: See src/README.md and docs/decisions.md.
 
 DECLARE OR REPLACE VARIABLE analytics_namespace STRING DEFAULT '`ftw-week-07`.`04-analytics`';
 DECLARE OR REPLACE VARIABLE mart_namespace STRING DEFAULT '`ftw-week-07`.`03-mart`';
@@ -9,6 +17,8 @@ DECLARE OR REPLACE VARIABLE mart_namespace STRING DEFAULT '`ftw-week-07`.`03-mar
 CREATE OR REPLACE TABLE IDENTIFIER(analytics_namespace || '.at_risk_students')
 USING DELTA
 AS
+-- Engagement signals summarize frequency and volume for each student and
+-- presentation. Students with no fact rows are added later from student_cohort.
 WITH engagement_signals AS (
   SELECT
     interaction.module_presentation_key,
@@ -20,6 +30,8 @@ WITH engagement_signals AS (
     ON interaction.activity_date_id = relative_date.date_key
   GROUP BY interaction.module_presentation_key, interaction.student_key
 ),
+-- Assessment signals summarize participation, observed performance, and late
+-- work. A missing average remains null when no scored submission exists.
 assessment_signals AS (
   SELECT
     fact.module_presentation_key,
@@ -37,6 +49,11 @@ assessment_signals AS (
     ON fact.due_date_key = due_date.date_key
   GROUP BY fact.module_presentation_key, fact.student_key
 ),
+-- Join both signal sets to the full cohort and calculate a transparent score:
+--   engagement: 2 points for zero clicks, 1 for fewer than 25;
+--   assessment: 2 for no submissions or average below 40, 1 below 50;
+--   registration: 1 for registering after the presentation began.
+-- Thresholds are assignment heuristics for prioritization, not causal claims.
 signals AS (
   SELECT
     cohort.student_cohort_key,
@@ -74,6 +91,8 @@ signals AS (
     ON cohort.module_presentation_key = assessment.module_presentation_key
     AND cohort.student_key = assessment.student_key
 )
+-- Translate the 0-5 score into simple operational bands. Keeping the numeric
+-- score lets reviewers understand why a student entered a band.
 SELECT
   student_cohort_key,
   module_presentation_key,

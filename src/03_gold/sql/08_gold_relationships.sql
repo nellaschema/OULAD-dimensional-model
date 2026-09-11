@@ -2,8 +2,16 @@
 -- Name: 08 - Gold Relationships
 -- Purpose: Register the two-fact/five-dimension model in Catalog Explorer.
 -- Prerequisite: Gold validation must pass before this file is called.
+-- Depends on: tests/08_validate_gold.sql proving non-null, unique, and matching keys.
+-- Produces: Seven primary-key and eleven foreign-key metadata constraints.
+-- Why: Catalog Explorer and BI tools can discover the star relationships, but
+-- Databricks PK/FK constraints are informational and do not clean bad rows.
+-- Rerun behavior: Existing named constraints are dropped, then recreated.
+-- Required access: Run as an owner of the participating Unity Catalog tables.
+-- Documentation: See src/README.md and docs/data-model.md.
 
--- Databricks informational keys are metadata; tests/08_validate_gold.sql proves them first.
+-- Remove foreign keys before primary keys because a referenced parent key cannot
+-- be dropped safely while child constraints still depend on it.
 ALTER TABLE `ftw-week-07`.`03-mart`.fact_assessments
   DROP CONSTRAINT IF EXISTS fk_assessments_student;
 ALTER TABLE `ftw-week-07`.`03-mart`.fact_assessments
@@ -27,6 +35,8 @@ ALTER TABLE `ftw-week-07`.`03-mart`.fact_vle_interactions
 ALTER TABLE `ftw-week-07`.`03-mart`.fact_vle_interactions
   DROP CONSTRAINT IF EXISTS fk_vle_interactions_activity_date;
 
+-- Remove prior primary-key declarations so this file can be rerun after a full
+-- table replacement without accumulating conflicting metadata.
 ALTER TABLE `ftw-week-07`.`03-mart`.dim_student
   DROP CONSTRAINT IF EXISTS pk_dim_student;
 ALTER TABLE `ftw-week-07`.`03-mart`.dim_course
@@ -42,6 +52,8 @@ ALTER TABLE `ftw-week-07`.`03-mart`.fact_assessments
 ALTER TABLE `ftw-week-07`.`03-mart`.fact_vle_interactions
   DROP CONSTRAINT IF EXISTS pk_fact_vle_interactions;
 
+-- Primary-key columns must be NOT NULL before their informational PK constraint
+-- can be registered. Gold validation has already checked these values.
 ALTER TABLE `ftw-week-07`.`03-mart`.dim_student
   ALTER COLUMN student_key SET NOT NULL;
 ALTER TABLE `ftw-week-07`.`03-mart`.dim_course
@@ -57,6 +69,7 @@ ALTER TABLE `ftw-week-07`.`03-mart`.fact_assessments
 ALTER TABLE `ftw-week-07`.`03-mart`.fact_vle_interactions
   ALTER COLUMN vle_interaction_key SET NOT NULL;
 
+-- Declare one key for each of the five dimensions and two facts.
 ALTER TABLE `ftw-week-07`.`03-mart`.dim_student
   ADD CONSTRAINT pk_dim_student PRIMARY KEY (student_key);
 ALTER TABLE `ftw-week-07`.`03-mart`.dim_course
