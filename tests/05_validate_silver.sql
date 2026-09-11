@@ -9,6 +9,11 @@ DECLARE OR REPLACE VARIABLE dq_namespace STRING DEFAULT '`ftw-week-07`.`01-raw`'
 DECLARE OR REPLACE VARIABLE dq_run_id STRING DEFAULT UUID();
 DECLARE OR REPLACE VARIABLE dq_executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP();
 
+-- Apply primary key constraint on student_vle_clean so the optimizer can skip
+-- redundant partial aggregation on the uniqueness check (8.46M rows).
+ALTER TABLE `ftw-week-07`.`02-clean`.student_vle_clean
+  ADD CONSTRAINT pk_student_vle_clean PRIMARY KEY(code_module, code_presentation, id_student, id_site, activity_date);
+
 -- Keep checks in one compatible UNION ALL set so scores and status rules are
 -- calculated consistently across every Silver dataset.
 INSERT INTO IDENTIFIER(dq_namespace || '.dq_check_results')
