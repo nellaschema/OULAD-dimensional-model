@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 %sql
 
 -- OULAD Bronze/Raw Data Quality Checks
@@ -218,3 +219,8 @@ SELECT
   END AS status
 FROM checks
 ORDER BY status DESC, dataset_name, check_name;
+=======
+-- Executable repository-owned checks are in tests/03_validate_bronze.sql,
+-- tests/05_validate_silver.sql, tests/08_validate_gold.sql, and
+-- tests/13_validate_analytics.sql.
+>>>>>>> Stashed changes

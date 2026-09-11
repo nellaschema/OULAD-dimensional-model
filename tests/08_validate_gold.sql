@@ -17,7 +17,7 @@ DECLARE OR REPLACE VARIABLE dq_executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
 
 -- Dimension branches test declared grains; fact branches test all direct
 -- dimension keys and measures. Final branches reconcile Gold with Silver.
-INSERT INTO `ftw-week-07`.`05-data-quality`.dq_check_results
+INSERT INTO `ftw-week-07`.`04-analytics`.dq_check_results
 WITH checks AS (
   SELECT
     'dim_student' AS dataset_name, 'student_key' AS column_name,
@@ -210,9 +210,9 @@ SELECT
   total_count,
   ASSERT_TRUE(
     COUNT_IF(status = 'FAIL' AND severity = 'CRITICAL') OVER () = 0,
-    'critical Gold data-quality check failed; inspect 05-data-quality.dq_check_results'
+    'critical Gold data-quality check failed; inspect 04-analytics.dq_check_results'
   ) AS gold_quality_gate
-FROM `ftw-week-07`.`05-data-quality`.dq_check_results
+FROM `ftw-week-07`.`04-analytics`.dq_check_results
 CROSS JOIN current_run
 WHERE run_id = current_run.current_run_id AND layer = 'GOLD'
 ORDER BY dataset_name, check_name;

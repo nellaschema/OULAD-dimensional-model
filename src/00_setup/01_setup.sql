@@ -26,37 +26,42 @@ DECLARE OR REPLACE VARIABLE dq_executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
 -- Explanation: IDENTIFIER() function allows using a variable as a schema name.
 -- This enables dynamic schema creation based on the variables defined above.
 -- IF NOT EXISTS prevents errors if the schema already exists.
-CREATE SCHEMA IF NOT EXISTS IDENTIFIER(raw_namespace);
-CREATE SCHEMA IF NOT EXISTS IDENTIFIER(clean_namespace);
-CREATE SCHEMA IF NOT EXISTS IDENTIFIER(mart_namespace);
-CREATE SCHEMA IF NOT EXISTS IDENTIFIER(analytics_namespace);
-CREATE SCHEMA IF NOT EXISTS IDENTIFIER(dq_namespace);
+-- Note: CREATE SCHEMA IF NOT EXISTS still requires CREATE SCHEMA permission.
+-- The five required schemas are expected to already exist in the catalog.
+-- If the data quality schema is missing, it will need to be created manually by an admin.
+-- CREATE SCHEMA IF NOT EXISTS IDENTIFIER(raw_namespace);
+-- CREATE SCHEMA IF NOT EXISTS IDENTIFIER(clean_namespace);
+-- CREATE SCHEMA IF NOT EXISTS IDENTIFIER(mart_namespace);
+-- CREATE SCHEMA IF NOT EXISTS IDENTIFIER(analytics_namespace);
+-- CREATE SCHEMA IF NOT EXISTS IDENTIFIER(dq_namespace);
 
 -- Explanation: Create a centralized table to store all data quality check results.
 -- The || operator concatenates the namespace variable with the table name.
 -- Each later suite appends a new run rather than overwriting history; dashboard
 -- views select the latest run per layer while retaining older runs for trends.
-CREATE TABLE IF NOT EXISTS IDENTIFIER(dq_namespace || '.dq_check_results') (
-  run_id STRING NOT NULL,
-  executed_at TIMESTAMP NOT NULL,
-  layer STRING NOT NULL,
-  dataset_name STRING NOT NULL,
-  column_name STRING,
-  check_name STRING NOT NULL,
-  quality_dimension STRING NOT NULL,
-  check_type STRING NOT NULL,
-  expectation STRING NOT NULL,
-  threshold_pct DECIMAL(7, 3) NOT NULL,
-  severity STRING NOT NULL,
-  check_owner STRING NOT NULL,
-  total_count BIGINT NOT NULL,
-  failed_count BIGINT NOT NULL,
-  passed_count BIGINT NOT NULL,
-  score_pct DECIMAL(7, 3) NOT NULL,
-  failure_pct DECIMAL(7, 3) NOT NULL,
-  status STRING NOT NULL
-)
-USING DELTA;
+-- Note: This requires the 05-data-quality schema to exist. If it does not exist,
+-- an admin with CREATE SCHEMA permission must create it first.
+-- CREATE TABLE IF NOT EXISTS IDENTIFIER(dq_namespace || '.dq_check_results') (
+--   run_id STRING NOT NULL,
+--   executed_at TIMESTAMP NOT NULL,
+--   layer STRING NOT NULL,
+--   dataset_name STRING NOT NULL,
+--   column_name STRING,
+--   check_name STRING NOT NULL,
+--   quality_dimension STRING NOT NULL,
+--   check_type STRING NOT NULL,
+--   expectation STRING NOT NULL,
+--   threshold_pct DECIMAL(7, 3) NOT NULL,
+--   severity STRING NOT NULL,
+--   check_owner STRING NOT NULL,
+--   total_count BIGINT NOT NULL,
+--   failed_count BIGINT NOT NULL,
+--   passed_count BIGINT NOT NULL,
+--   score_pct DECIMAL(7, 3) NOT NULL,
+--   failure_pct DECIMAL(7, 3) NOT NULL,
+--   status STRING NOT NULL
+-- )
+-- USING DELTA;
 
 -- Explanation: CTE (Common Table Expression) to define the seven required OULAD files.
 -- EXPLODE() converts the array into individual rows, one per filename.

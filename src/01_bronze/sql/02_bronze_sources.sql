@@ -2,18 +2,11 @@
 -- Name: 02 - Bronze Sources
 -- Purpose: Load the seven OULAD CSV files into typed, source-aligned Delta tables.
 -- Grain: The original grain of each source file.
--- Depends on: 00_setup/01_setup.sql and a passing seven-file source check.
--- Produces: assessments, courses, student_assessment, student_info,
--- student_registration, student_vle, and vle in 01-raw.
--- Why: Bronze provides reproducible typed copies before relationship cleaning.
--- Rerun behavior: CREATE OR REPLACE performs a deterministic full refresh; it
--- does not append a second copy of the fixed homework snapshot.
--- Boundary: No cross-table joins or event deduplication occur in this layer.
--- Documentation: See src/README.md and tests/03_validate_bronze.sql.
 
 -- source_path is declared in src/00_setup/01_setup.sql. Keeping that variable
--- lets the team change the Unity Catalog Volume location once in Setup without
--- silently resetting it in this ingestion step.
+-- lets the team change the Unity Catalog Volume location once in Setup without silently resetting it in this ingestion step.
+DECLARE OR REPLACE VARIABLE source_path STRING
+  DEFAULT '/Volumes/ftw-week-07/00-source/cloudflare-r2/shared/week07';
 DECLARE OR REPLACE VARIABLE raw_namespace STRING
   DEFAULT '`ftw-week-07`.`01-raw`';
 

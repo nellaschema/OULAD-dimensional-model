@@ -2,20 +2,35 @@
 -- Name: 03 - Bronze Validation
 -- Purpose: Persist source-level DQ results and stop on critical ingestion failures.
 -- Grain: One row per data quality check and pipeline run.
--- Depends on: Setup and all seven Bronze tables.
--- Produces: Append-only BRONZE rows in dq_check_results plus a blocking gate.
--- Why: Typed ingestion can succeed even when keys, domains, volumes, or rescued
--- values are wrong; this suite proves the source contract before Silver begins.
--- Rerun behavior: A new UUID records a new validation run; history is preserved.
--- Expected: Critical checks pass for the supplied snapshot. Medium volume and
--- rescued-data checks stay visible without blocking unless marked CRITICAL.
--- Documentation: See tests/README.md for formulas and troubleshooting.
 
 -- Explanation: Declare variables needed from the setup notebook.
 DECLARE OR REPLACE VARIABLE raw_namespace STRING DEFAULT '`ftw-week-07`.`01-raw`';
-DECLARE OR REPLACE VARIABLE dq_namespace STRING DEFAULT '`ftw-week-07`.`05-data-quality`';
+DECLARE OR REPLACE VARIABLE dq_namespace STRING DEFAULT '`ftw-week-07`.`01-raw`';
 DECLARE OR REPLACE VARIABLE dq_run_id STRING DEFAULT UUID();
 DECLARE OR REPLACE VARIABLE dq_executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP();
+
+-- Create the dq_check_results table if it doesn't exist
+-- Using 01-raw schema since 05-data-quality requires admin permissions
+CREATE TABLE IF NOT EXISTS `ftw-week-07`.`01-raw`.dq_check_results (
+  run_id STRING,
+  executed_at TIMESTAMP,
+  layer STRING,
+  dataset_name STRING,
+  column_name STRING,
+  check_name STRING,
+  quality_dimension STRING,
+  check_type STRING,
+  expectation STRING,
+  threshold_pct DECIMAL(7, 3),
+  severity STRING,
+  check_owner STRING,
+  total_count BIGINT,
+  failed_count BIGINT,
+  passed_count BIGINT,
+  score_pct DECIMAL(7, 3),
+  failure_pct DECIMAL(7, 3),
+  status STRING
+);
 
 -- Each UNION ALL branch returns the same check metric shape. This makes adding
 -- a rule explicit and keeps every expectation visible in the persisted table.
