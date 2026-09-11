@@ -11,6 +11,8 @@ CSV files -> Bronze (raw) -> Silver (clean) -> Gold (dbt mart)
           -> Analytics -> Metabase dashboards
 ```
 
+![OULAD end-to-end pipeline with data-quality checks](docs/assets/final-pipeline-with-dq.svg)
+
 - **Bronze** keeps the source data in its original form.
 - **Silver** cleans values, fixes data types, and combines duplicates.
 - **Gold/dbt mart** organizes the data into facts and dimensions.
